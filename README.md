@@ -1,1 +1,1 @@
-## DGX SPARK Tests in ASUS GX 10
+##Tests in ASUS GX 10
