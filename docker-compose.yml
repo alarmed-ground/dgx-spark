@@ -1,0 +1,96 @@
+#version: '3.8'
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus_data: {}
+  grafana: {}
+
+services:
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: always
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    networks:
+      - monitoring
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: always
+    volumes:
+      - /home/hyperscalers/Documents/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring
+
+  dcgm_exporter:
+    image: nvcr.io/nvidia/k8s/dcgm-exporter:4.4.1-4.6.0-ubuntu22.04
+    container_name: dcgm_exporter
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+    restart: always
+    environment:
+      - DCGM_EXPORTER_NO_HOSTNAME=1
+    cap_add:
+      - SYS_ADMIN
+    ports:
+      - "9400:9400"
+    networks:
+      - monitoring
+
+  vllm:
+      image: peratchikannan/hs-public:vllm-spark-custom
+      container_name: vllm
+      restart: always
+      ports:
+          - "8000:8000" # Map host port 8000 to container port 8000
+      volumes:
+      - /home/hyperscalers/Documents/models:/root/.cache/huggingface
+      deploy:
+          resources:
+            reservations:
+              devices:
+                - driver: nvidia
+                  count: all # Use all available GPUs
+                  capabilities: [gpu]
+      command:
+      - "--model qwen/qwen3-vl-30b-a3b-thinking"
+      # - "--dtype"
+      # - "bfloat16" 
+      # - "--tensor-parallel-size"
+      # - "1"
+      # - "--gpu-memory-utilization"
+      # - "0.9"
+      # - "--max-model-len"
+      # - "3264"
+      # - "--max-num-batched-tokens"
+      # - "3264"
+      # - "--trust-remote-code"
+      shm_size: "2gb"
