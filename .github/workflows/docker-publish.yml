@@ -25,7 +25,7 @@ env:
 jobs:
   build:
 
-    runs-on: catthehacker/ubuntu:full-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
