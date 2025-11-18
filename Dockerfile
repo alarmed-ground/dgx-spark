@@ -61,4 +61,4 @@ RUN pip install vllm[audio]
 # Expose port
 EXPOSE 8888
 
-ENTRYPOINT []
+ENTRYPOINT ["vllm", "serve"]
