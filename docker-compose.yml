@@ -5,11 +5,13 @@ networks:
 volumes:
   prometheus_data: {}
   grafana: {}
+  intrallm-webui: {}
 
 services:
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
+    hostname: node-exporter
     restart: always
     volumes:
       - /proc:/host/proc:ro
@@ -28,6 +30,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
+    hostname: prometheus
     restart: always
     volumes:
       - /home/hyperscalers/Documents/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
@@ -46,6 +49,7 @@ services:
   dcgm_exporter:
     image: nvcr.io/nvidia/k8s/dcgm-exporter:4.4.1-4.6.0-ubuntu22.04
     container_name: dcgm_exporter
+    hostname: dcgm_exporter
     deploy:
       resources:
         reservations:
@@ -63,14 +67,29 @@ services:
     networks:
       - monitoring
 
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=P@ssw0rd123!
+      - GF_SERVER_ROOT_URL=http://localhost:3000 # Adjust if using a different domain/port
+    restart: always
+
   vllm:
       image: vllm-spark-custom-v2
       container_name: vllm
+      hostname: vllm
       restart: always
       ports:
           - "8000:8000" # Map host port 8000 to container port 8000
       volumes:
-      - /home/<username>/Documents/models:/root/.cache/huggingface
+      - /home/hyperscalers/Documents/models:/root/.cache/huggingface
+#      environment:
+ #         - MODEL=/root/.cache/huggingface/model-qwen3-vl-30b-a3b-thinking
       deploy:
           resources:
             reservations:
@@ -92,3 +111,17 @@ services:
       # - "3264"
       # - "--trust-remote-code"
       shm_size: "2gb"
+  
+  intrallm-webui:
+        image: 
+        depends_on:
+          - vllm
+        ports:
+          - "8080:8080" # Or your desired host port, e.g., "3000:8080"
+        volumes:
+          - ./intrallm-webui:/app/backend/data
+        environment:
+          - OPENAI_API_BASE_URL=http://vllm:8000/v1 # Ensure this matches your vllm service name and port
+          - OPENAI_API_KEY=1234
+          - PROMETHEUS_HOST=
+        restart: always
