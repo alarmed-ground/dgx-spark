@@ -30,6 +30,7 @@ spec:
       containers:
       - name: vllm
         image: peratchikannan/hs-public:vllm-spark-custom-v2
+        imagePullPolicy: IfNotPresent
         command: ["/bin/sh", "-c"]
         runtimeClassName: nvidia
         args: [
